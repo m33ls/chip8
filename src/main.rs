@@ -119,8 +119,8 @@ impl Chip8 {
                         self.pc += 2;
                     },
                     0x000E => { // 00EE: Returns from subroutine
-                        self.pc = self.stack[self.sp];
                         self.sp -= 1;
+                        self.pc = self.stack[self.sp];
                     },
                     _ => println!("Unknown opcode [0x0000]: {:#0X}", self.opcode),
                 }
@@ -129,7 +129,7 @@ impl Chip8 {
                 self.pc = self.opcode & 0x0FFF;
             },
             0x2000 => { // 2nnn: Calls subroutine at nnn
-                self.stack[self.sp] = self.pc;
+                self.stack[self.sp] = self.pc + 2;
                 self.sp += 1;
                 self.pc = self.opcode & 0x0FFF;
             },
@@ -155,12 +155,11 @@ impl Chip8 {
                 }
             },
             0x6000 => { // 6xkk: Set Vx = kk
-                // println!("{:#0X}", (self.opcode & 0x0F00) >> 8);
                 self.v[((self.opcode & 0x0F00) >> 8) as usize] = (self.opcode & 0x00FF) as u8;
                 self.pc += 2;
             },
             0x7000 => { // 7xkk: Set Vx = Vx + kk
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] += (self.opcode & 0x00FF) as u8;
+                self.v[((self.opcode & 0x0F00) >> 8) as usize] = (self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16 + (self.opcode & 0x00FF) as u16) as u8;
                 self.pc += 2;
             },
             0x8000 => {
@@ -187,7 +186,7 @@ impl Chip8 {
                         } else {
                             self.v[0xF] = 0;
                         }
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] += self.v[((self.opcode & 0x00F0) >> 4) as usize];
+                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = (self.v[((self.opcode & 0x00F0) >> 4) as usize] as u16 + self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16) as u8;
                         self.pc += 2;
                     },
                     0x0005 => { // 8xy5: Set Vx = Vx - Vy, set VF = NOT borrow
@@ -196,7 +195,7 @@ impl Chip8 {
                         } else {
                             self.v[0xF] = 0;
                         }
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] -= self.v[((self.opcode & 0x00F0) >> 4) as usize]; 
+                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.v[((self.opcode & 0x0F00) >> 8) as usize].wrapping_sub(self.v[((self.opcode & 0x00F0) >> 4) as usize]); 
                         self.pc += 2;
                     },
                     0x0006 => { // 8xy6: Set Vx = Vx SHR 1
@@ -237,6 +236,7 @@ impl Chip8 {
             },
             0xC000 => { // Cxkk: Set Vx = random byte AND kk
                 self.v[((self.opcode & 0x0F00) >> 8) as usize] = rand::thread_rng().gen::<u8>() & (self.opcode & 0x00FF) as u8;
+                self.pc += 2;
             },
             0xD000 => { // Dxyn: Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
                 self.v[0xF] = 0;
@@ -390,6 +390,7 @@ fn main() -> Result<(), Error> {
         {
             if myChip8.draw_flag {
                 myChip8.draw(pixels.frame_mut());
+                myChip8.draw_flag = false;
                 if let Err(err) = pixels.render() {
                     log_error("pixels.render", err);
                     elwt.exit();
