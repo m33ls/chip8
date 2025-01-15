@@ -1,4 +1,4 @@
-![Screenshot](/screenshot?raw=true "Space Invaders")
+![Screenshot](/screenshot.png?raw=true "Space Invaders")
 
 ## About
 
