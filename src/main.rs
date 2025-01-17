@@ -104,10 +104,18 @@ impl Chip8 {
         }
     }
 
+    fn log(&self, call: &str) {
+        println!("{:#0x}      {:x}      {}", self.pc, self.opcode, call);
+    }
+
     fn emulate_cycle(&mut self) {
         // fetch opcode
         self.opcode = (self.memory[self.pc as usize] as u16) << 8 | (self.memory[self.pc as usize + 1] as u16);
-        println!("{:#0X}: {:#0X}", self.pc, self.opcode);
+        
+        let x        = ((self.opcode & 0x0F00) >> 8) as usize;
+        let y        = ((self.opcode & 0x00F0) >> 4) as usize;
+        let nnn      = self.opcode & 0x0FFF;
+        let kk       = (self.opcode & 0x00FF) as u8;
 
         // decode and execute opcode
         match self.opcode & 0xF000 {
@@ -117,158 +125,184 @@ impl Chip8 {
                         self.gfx = [[0x00; 32]; 64];
                         self.draw_flag = true;
                         self.pc += 2;
+                        self.log("CLS");
                     },
                     0x000E => { // 00EE: Returns from subroutine
                         self.sp -= 1;
                         self.pc = self.stack[self.sp];
+                        self.log("RET");
                     },
                     _ => println!("Unknown opcode [0x0000]: {:#0X}", self.opcode),
                 }
             },
             0x1000 => { // 1nnn: Jumps to location nnn
-                self.pc = self.opcode & 0x0FFF;
+                self.pc = nnn;
+                self.log("JP addr");
             },
             0x2000 => { // 2nnn: Calls subroutine at nnn
                 self.stack[self.sp] = self.pc + 2;
                 self.sp += 1;
-                self.pc = self.opcode & 0x0FFF;
+                self.pc = nnn;
+                self.log("CALL addr");
             },
             0x3000 => { // 3xkk: Skip next instruction if Vx = kk
-                if self.v[((self.opcode & 0x0F00) >> 8) as usize] == ((self.opcode & 0x00FF) as u8) {
+                if self.v[x] == kk {
                     self.pc += 4;
                 } else {
                     self.pc += 2;
                 }
+                self.log("SE Vx, byte");
             },
             0x4000 => { // 4xkk: Skip next instruction if Vx != kk
-                if self.v[((self.opcode & 0x0F00) >> 8) as usize] != ((self.opcode & 0x00FF) as u8) {
+                if self.v[x] != kk {
                     self.pc += 4;
                 } else {
                     self.pc += 2;
                 }
+                self.log("SNE Vx, byte");
             },
             0x5000 => { // 5xy0: Skip next instruction if Vx = Vy
-                if self.v[((self.opcode & 0x0F00) >> 8) as usize] == self.v[((self.opcode & 0x00F0) >> 4) as usize] {
+                if self.v[x] == self.v[y] {
                     self.pc += 4;
                 } else {
                     self.pc += 2;
                 }
+                self.log("SE Vx, Vy");
             },
             0x6000 => { // 6xkk: Set Vx = kk
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] = (self.opcode & 0x00FF) as u8;
+                self.v[x] = kk;
                 self.pc += 2;
+                self.log("LD Vx, byte");
             },
             0x7000 => { // 7xkk: Set Vx = Vx + kk
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] = (self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16 + (self.opcode & 0x00FF) as u16) as u8;
+                self.v[x] = (self.v[x] as u16 + kk as u16) as u8;
                 self.pc += 2;
+                self.log("ADD Vx, byte");
             },
             0x8000 => {
                 match self.opcode & 0x000F {
                     0x0000 => { // 8xy0: Set Vx = Vy
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.v[((self.opcode & 0x00F0) >> 4) as usize];
+                        self.v[x] = self.v[y];
                         self.pc += 2;
+                        self.log("LD Vx, Vy");
                     },
                     0x0001 => { // 8xy1: Set Vx = Vx OR Vy
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.v[((self.opcode & 0x0F00) >> 8) as usize] | self.v[((self.opcode & 0x00F0) >> 4) as usize];
+                        self.v[x] = self.v[x] | self.v[y];
                         self.pc += 2;
+                        self.log("OR Vx, Vy");
                     },
                     0x0002 => { // 8xy2: Set Vx = Vx AND Vy
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.v[((self.opcode & 0x0F00) >> 8) as usize] & self.v[((self.opcode & 0x00F0) >> 4) as usize];
+                        self.v[x] = self.v[x] & self.v[y];
                         self.pc += 2;
+                        self.log("AND Vx, Vy");
                     },
                     0x0003 => { // 8xy3: Set Vx = Vx XOR Vy
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.v[((self.opcode & 0x0F00) >> 8) as usize] ^ self.v[((self.opcode & 0x00F0) >> 4) as usize];
+                        self.v[x] = self.v[x] ^ self.v[y];
                         self.pc += 2;
+                        self.log("XOR Vx, Vy");
                     },
                     0x0004 => { // 8xy4: Set Vx = Vx + Vy, set VF = carry
-                        if self.v[((self.opcode & 0x0F00) >> 8) as usize] > 255 {
+                        if self.v[x] > 255 {
                             self.v[0xF] = 1;
                         } else {
                             self.v[0xF] = 0;
                         }
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = (self.v[((self.opcode & 0x00F0) >> 4) as usize] as u16 + self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16) as u8;
+                        self.v[x] = (self.v[x] as u16 + self.v[y] as u16) as u8;
                         self.pc += 2;
+                        self.log("ADD Vx, Vy");
                     },
                     0x0005 => { // 8xy5: Set Vx = Vx - Vy, set VF = NOT borrow
-                        if self.v[((self.opcode & 0x0F00) >> 8) as usize] > self.v[((self.opcode & 0x00F0) >> 4) as usize] {
+                        if self.v[x] > self.v[y] {
                             self.v[0xF] = 1;
                         } else {
                             self.v[0xF] = 0;
                         }
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.v[((self.opcode & 0x0F00) >> 8) as usize].wrapping_sub(self.v[((self.opcode & 0x00F0) >> 4) as usize]); 
+                        self.v[x] = self.v[x].wrapping_sub(self.v[y]); 
                         self.pc += 2;
+                        self.log("SUB Vx, Vy");
                     },
                     0x0006 => { // 8xy6: Set Vx = Vx SHR 1
-                        self.v[0xF] = self.v[((self.opcode & 0x0F00) >> 8) as usize] & 1;
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] >>= 1;
+                        self.v[0xF] = self.v[x] & 1;
+                        self.v[x] >>= 1;
                         self.pc += 2;
+                        self.log("SHR Vx {, Vy}");
                     },
                     0x0007 => { // 8xy7: Set Vx = Vy - Vx, set VF = NOT borrow
-                        if self.v[((self.opcode & 0x00F0) >> 4) as usize] > self.v[((self.opcode & 0x0F00) >> 8) as usize] {
+                        if self.v[y] > self.v[x] {
                             self.v[0xF] = 1;
                         } else {
                             self.v[0xF] = 0;
                         }
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.v[((self.opcode & 0x00F0) >> 4) as usize] - self.v[((self.opcode & 0x0F00) >> 8) as usize];
+                        self.v[x] = self.v[y] - self.v[x];
                         self.pc += 2;
+                        self.log("SUBN Vx, Vy");
                     },
                     0x000E => { // 8xyE: set Vx = Vx SHL 1
-                        self.v[0xF] = (self.v[((self.opcode & 0x0F00) >> 8) as usize] & 0x80) >> 7;
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] <<= 1;
+                        self.v[0xF] = (self.v[x] & 0x80) >> 7;
+                        self.v[x] <<= 1;
                         self.pc += 2;
+                        self.log("SHL Vx {, Vy}");
                     },
                     _ => println!("Unknown opcode [0x8000]: {:#0X}", self.opcode),
                 }
             },
             0x9000 => { // 9xy0: Skip next instruction if Vx != Vy
-                if (self.opcode & 0x0F00) >> 8 != (self.opcode & 0x00F0) >> 4 {
+                if self.v[x] != self.v[y] >> 4 {
                     self.pc += 4;
                 } else {
                     self.pc += 2;
                 }
+                self.log("SNE Vx, Vy");
             },
             0xA000 => { // Annn: Set I = nnn
-                self.i = self.opcode & 0x0FFF;
+                self.i = nnn;
                 self.pc += 2;
+                self.log("LD I, addr");
             },
             0xB000 => { // Bnnn: Jump to location nnn + V0
-                self.pc = self.opcode & 0x0FFF + (self.v[0] as u16);
+                self.pc = nnn + (self.v[0] as u16);
+                self.log("JP V0, addr");
             },
             0xC000 => { // Cxkk: Set Vx = random byte AND kk
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] = rand::thread_rng().gen::<u8>() & (self.opcode & 0x00FF) as u8;
+                self.v[x] = rand::thread_rng().gen::<u8>() & kk;
                 self.pc += 2;
+                self.log("RND Vx, byte");
             },
             0xD000 => { // Dxyn: Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
                 self.v[0xF] = 0;
+
                 for byte in 0..(self.opcode & 0x000F) as usize {
-                    let y = (self.v[((self.opcode & 0x00F0) >> 4) as usize] as usize + byte as usize) % 32;
+                    let dxyn_y = (self.v[y] as usize + byte as usize) % 32;
                     for bit in 0..8 {
-                        let x = (self.v[((self.opcode & 0x0F00) >> 8) as usize] as usize + bit as usize) % 64;
+                        let dxyn_x = (self.v[x] as usize + bit as usize) % 64;
                         let color = (self.memory[(self.i as usize + byte) as usize] >> (7 - bit)) & 1;
-                        self.v[0xf] |= color & self.gfx[x][y];
-                        self.gfx[x][y] ^= color;
+                        self.v[0xf] |= color & self.gfx[dxyn_x][dxyn_y];
+                        self.gfx[dxyn_x][dxyn_y] ^= color;
                     }
                 }
 
                 self.draw_flag = true;
                 self.pc += 2;
+                self.log("DRW Vx, Vy, nibble");
 
             },
             0xE000 => {
                 match self.opcode & 0x000F {
                     0x000E => { // Ex9E: Skip next instruction if key with the value of Vx is pressed
-                        if self.key[self.v[((self.opcode & 0x0F00) >> 8) as usize] as usize] == 1 {
+                        if self.key[self.v[x] as usize] == 1 {
                             self.pc += 4;
                         } else {
                             self.pc += 2;
                         }
+                        self.log("SKP Vx");
                     },
                     0x0001 => { // ExA1: Skip next instruction if key with the value of Vx is not pressed
-                        if self.key[self.v[((self.opcode & 0x0F00) >> 8) as usize] as usize] != 1 {
+                        if self.key[self.v[x] as usize] != 1 {
                             self.pc += 4;
                         } else {
                             self.pc += 2;
                         }
+                        self.log("SKNP Vx");
                     },
                     _ => println!("Unknown opcode [0xE000]: {:#0X}", self.opcode),
                 }
@@ -276,53 +310,62 @@ impl Chip8 {
             0xF000 => {
                 match self.opcode & 0x00FF {
                     0x0007 => { // Fx07: Set Vx = delay timer value
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.delay_timer;
+                        self.v[x] = self.delay_timer;
                         self.pc += 2;
+                        self.log("LD Vx, DT");
                     },
                     0x000A => { // Fx0A: Wait for a key press, store the value of the key in Vx
                         if self.key != [0; 16] {
                             for i in 0..15 {
                                 if self.key[i] != 0 {
-                                    self.v[((self.opcode & 0x0F00) >> 8) as usize] = i as u8;
+                                    self.v[x] = i as u8;
                                 }
                             }
 
                             self.pc += 2;
+                            self.log("LD Vx, K");
                         }
                     },
                     0x0015 => { // Fx15: Set delay timer = Vx
-                        self.delay_timer = self.v[((self.opcode & 0x0F00) >> 8) as usize];
+                        self.delay_timer = self.v[x];
                         self.pc += 2;
+                        self.log("LD DT, Vx");
                     },
                     0x0018 => { // Set sound timer = Vx
-                        self.sound_timer = self.v[((self.opcode & 0x0F00) >> 8) as usize];
+                        self.sound_timer = self.v[x];
                         self.pc += 2;
+                        self.log("LD ST, Vx");
                     },
                     0x001E => { // Set I = I + Vx
-                        self.i += self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16;
+                        self.i += self.v[x] as u16;
                         self.pc += 2;
+                        self.log("ADD I, Vx");
                     },
                     0x0029 => { // Set I = location of sprite for digit Vx
-                        self.i = (self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16) * 5;
+                        self.i = (self.v[x] as u16) * 5;
                         self.pc += 2;
+                        self.log("LD F, Vx");
                     },
                     0x0033 => { // Store BCD representation of Vx in memory location I, I+1, and I+2
-                        self.memory[self.i as usize]       =  self.v[((self.opcode & 0x0F00) >> 8) as usize] / 100;
-                        self.memory[(self.i + 1) as usize] = (self.v[((self.opcode & 0x0F00) >> 8) as usize] / 10) % 10;
-                        self.memory[(self.i + 2) as usize] = (self.v[((self.opcode & 0x0F00) >> 8) as usize] % 100) % 10;
+                        self.memory[self.i as usize]       =   self.v[x] / 100;
+                        self.memory[(self.i + 1) as usize] =  (self.v[x] / 10) % 10;
+                        self.memory[(self.i + 2) as usize] =  (self.v[x] % 100) % 10;
                         self.pc += 2;
+                        self.log("LD B, Vx");
                     },
                     0x0055 => { // Store registers V0 through Vx in memory starting at location I
-                        for i in 0..((self.opcode & 0x0F00) >> 8) {
+                        for i in 0..(x as u16) {
                             self.memory[(self.i + i) as usize] = self.v[i as usize];
                         }
                         self.pc += 2;
+                        self.log("LD [I], Vx");
                     },
                     0x0065 => { // Read registers V0 through Vx from memory starting at location I
-                        for i in 0..((self.opcode & 0x0F00) >> 8) {
+                        for i in 0..(x as u16) {
                             self.v[i as usize] = self.memory[(self.i + i) as usize];
                         }
                         self.pc += 2;
+                        self.log("LD Vx, [I]");
                     },
                     _ => println!("Unknown opcode [0xF000]: {:#0X}", self.opcode),
                 }
