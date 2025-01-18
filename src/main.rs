@@ -1,5 +1,5 @@
 use pixels::{Error, Pixels, SurfaceTexture};
-use std::fs;
+use std::{fs, time::Duration, thread};
 use std::path::Path;
 use winit::dpi::LogicalSize;
 use winit::event::{Event, WindowEvent};
@@ -13,6 +13,7 @@ use rand::Rng;
 
 const WIDTH: u32 = 64;
 const HEIGHT: u32 = 32;
+const TICK_SPEED: u64 = 150;
 
 // implement data types
 
@@ -377,15 +378,6 @@ impl Chip8 {
             },
         }
         
-        // update timers
-        if self.delay_timer > 0 {
-            self.delay_timer = self.delay_timer - 1;
-        }
-        
-        if self.sound_timer > 0 {
-            println!("BEEP");
-            self.sound_timer = self.sound_timer - 1;
-        }
     }
 
 }
@@ -420,11 +412,35 @@ fn main() -> Result<(), Error> {
     let path = std::env::args().nth(1).expect("No path entered");
     let _ = myChip8.load_program(&path);
 
+    let mut last_frame = std::time::Instant::now();
+    let mut last_timer = std::time::Instant::now();
+
     // emulation loop
     let res = event_loop.run(|event, elwt| {
 
         // emulate one cycle
         myChip8.emulate_cycle();
+
+        // lazy timing implementation
+        if last_frame.elapsed() < Duration::from_secs(1 / TICK_SPEED) {
+            thread::sleep(Duration::from_secs(1 / TICK_SPEED) - last_frame.elapsed());
+        }
+        println!("DT: {:?}", last_frame.elapsed()); 
+        last_frame = std::time::Instant::now();
+
+        // update timers
+        if myChip8.delay_timer > 0 {
+            if last_timer.elapsed() >= Duration::from_secs(1 / 60) {
+                myChip8.delay_timer = myChip8.delay_timer - 1;
+            }
+        }
+        
+        if myChip8.sound_timer > 0 {
+            if last_timer.elapsed() >= Duration::from_secs(1 / 60) {
+                println!("BEEP");
+                myChip8.sound_timer = myChip8.sound_timer - 1;
+            }
+        }
 
         // if the draw flag is set, draw the current frame
         if let Event::WindowEvent {
@@ -454,7 +470,6 @@ fn main() -> Result<(), Error> {
                 KeyCode::KeyQ,   KeyCode::KeyW,   KeyCode::KeyE,   KeyCode::KeyR,
                 KeyCode::KeyA,   KeyCode::KeyS,   KeyCode::KeyD,   KeyCode::KeyF,
                 KeyCode::KeyZ,   KeyCode::KeyX,   KeyCode::KeyC,   KeyCode::KeyV
-
             ];
 
             for i in 0..keybinds.len() {
