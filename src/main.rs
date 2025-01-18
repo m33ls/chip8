@@ -105,7 +105,7 @@ impl Chip8 {
     }
 
     fn log(&self, call: &str) {
-        println!("{:#0x}      {:x}      {}", self.pc, self.opcode, call);
+        println!("{:#0x}      {:04x}      {}", self.pc, self.opcode, call);
     }
 
     fn emulate_cycle(&mut self) {
@@ -114,8 +114,9 @@ impl Chip8 {
         
         let x        = ((self.opcode & 0x0F00) >> 8) as usize;
         let y        = ((self.opcode & 0x00F0) >> 4) as usize;
-        let nnn      = self.opcode & 0x0FFF;
+        let n        = (self.opcode & 0x000F) as usize;
         let kk       = (self.opcode & 0x00FF) as u8;
+        let nnn      = self.opcode & 0x0FFF;
 
         // decode and execute opcode
         match self.opcode & 0xF000 {
@@ -271,7 +272,7 @@ impl Chip8 {
             0xD000 => { // Dxyn: Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
                 self.v[0xF] = 0;
 
-                for byte in 0..(self.opcode & 0x000F) as usize {
+                for byte in 0..n {
                     let dxyn_y = (self.v[y] as usize + byte as usize) % 32;
                     for bit in 0..8 {
                         let dxyn_x = (self.v[x] as usize + bit as usize) % 64;
@@ -448,39 +449,19 @@ fn main() -> Result<(), Error> {
                 return;
             }
 
-            if input.key_pressed(KeyCode::Digit1) {myChip8.key[0x0] = 1;}
-            if input.key_released(KeyCode::Digit1) {myChip8.key[0x0] = 0;}
-            if input.key_pressed(KeyCode::Digit2) {myChip8.key[0x1] = 1;}
-            if input.key_released(KeyCode::Digit2) {myChip8.key[0x1] = 0;}
-            if input.key_pressed(KeyCode::Digit3) {myChip8.key[0x2] = 1;}
-            if input.key_released(KeyCode::Digit3) {myChip8.key[0x2] = 0;}
-            if input.key_pressed(KeyCode::Digit4) {myChip8.key[0x3] = 1;}
-            if input.key_released(KeyCode::Digit4) {myChip8.key[0x3] = 0;}
-            if input.key_pressed(KeyCode::KeyQ) {myChip8.key[0x4] = 1;}
-            if input.key_released(KeyCode::KeyQ) {myChip8.key[0x4] = 0;}
-            if input.key_pressed(KeyCode::KeyW) {myChip8.key[0x5] = 1;}
-            if input.key_released(KeyCode::KeyW) {myChip8.key[0x5] = 0;}
-            if input.key_pressed(KeyCode::KeyE) {myChip8.key[0x6] = 1;}
-            if input.key_released(KeyCode::KeyE) {myChip8.key[0x6] = 0;}
-            if input.key_pressed(KeyCode::KeyR) {myChip8.key[0x7] = 1;}
-            if input.key_released(KeyCode::KeyR) {myChip8.key[0x7] = 0;}
-            if input.key_pressed(KeyCode::KeyA) {myChip8.key[0x8] = 1;}
-            if input.key_released(KeyCode::KeyA) {myChip8.key[0x8] = 0;}
-            if input.key_pressed(KeyCode::KeyS) {myChip8.key[0x9] = 1;}
-            if input.key_released(KeyCode::KeyS) {myChip8.key[0x9] = 0;}
-            if input.key_pressed(KeyCode::KeyD) {myChip8.key[0xA] = 1;}
-            if input.key_released(KeyCode::KeyD) {myChip8.key[0xA] = 0;}
-            if input.key_pressed(KeyCode::KeyF) {myChip8.key[0xB] = 1;}
-            if input.key_released(KeyCode::KeyF) {myChip8.key[0xB] = 0;}
-            if input.key_pressed(KeyCode::KeyZ) {myChip8.key[0xC] = 1;}
-            if input.key_released(KeyCode::KeyZ) {myChip8.key[0xC] = 0;}
-            if input.key_pressed(KeyCode::KeyX) {myChip8.key[0xD] = 1;}
-            if input.key_released(KeyCode::KeyX) {myChip8.key[0xD] = 0;}
-            if input.key_pressed(KeyCode::KeyC) {myChip8.key[0xE] = 1;}
-            if input.key_released(KeyCode::KeyC) {myChip8.key[0xE] = 0;}
-            if input.key_pressed(KeyCode::KeyV) {myChip8.key[0xF] = 1;}
-            if input.key_released(KeyCode::KeyV) {myChip8.key[0xF] = 0;} 
+            let keybinds = [
+                KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3, KeyCode::Digit4,
+                KeyCode::KeyQ,   KeyCode::KeyW,   KeyCode::KeyE,   KeyCode::KeyR,
+                KeyCode::KeyA,   KeyCode::KeyS,   KeyCode::KeyD,   KeyCode::KeyF,
+                KeyCode::KeyZ,   KeyCode::KeyX,   KeyCode::KeyC,   KeyCode::KeyV
 
+            ];
+
+            for i in 0..keybinds.len() {
+                if input.key_pressed(keybinds[i]) {myChip8.key[i] = 1;}
+                else if input.key_released(keybinds[i]) {myChip8.key[i] = 0;}
+            }
+            
             // resize the window
             if let Some(size) = input.window_resized() {
                 myChip8.draw_flag = true;
