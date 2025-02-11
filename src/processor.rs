@@ -3,6 +3,11 @@ use std::fs;
 use std::path::Path;
 use crate::{WIDTH};
 
+// configure test cases
+#[cfg(test)]
+#[path = "test_opcodes.rs"]
+mod processor_test;
+
 // implement data types
 
 pub struct Chip8 {
@@ -206,12 +211,18 @@ impl Chip8 {
                     },
                     0x0004 => { 
                         // 8xy4: Set Vx = Vx + Vy, set VF = carry
-                        if self.v[x] > 255 {
+                        
+                        // Set Vx = Vx + Vy
+                        let result = self.v[x] as u16 + self.v[y] as u16;
+                        self.v[x] = result as u8;
+                        
+                        // Compare and set VF
+                        if result > 0xFF {
                             self.v[0xF] = 1;
                         } else {
                             self.v[0xF] = 0;
                         }
-                        self.v[x] = (self.v[x] as u16 + self.v[y] as u16) as u8;
+
                         self.pc += 2;
                         self.log("ADD Vx, Vy");
                     },
