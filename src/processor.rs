@@ -111,13 +111,15 @@ impl Chip8 {
         match self.opcode & 0xF000 {
             0x0000 => {
                 match self.opcode & 0x000F {
-                    0x0000 => { // 00E0: Clears the screen
+                    0x0000 => { 
+                        // 00E0: Clears the screen
                         self.gfx = [[0x00; 32]; 64];
                         self.draw_flag = true;
                         self.pc += 2;
                         self.log("CLS");
                     },
-                    0x000E => { // 00EE: Returns from subroutine
+                    0x000E => { 
+                        // 00EE: Returns from subroutine
                         self.sp -= 1;
                         self.pc = self.stack[self.sp];
                         self.log("RET");
@@ -125,17 +127,20 @@ impl Chip8 {
                     _ => println!("Unknown opcode [0x0000]: {:#0X}", self.opcode),
                 }
             },
-            0x1000 => { // 1nnn: Jumps to location nnn
+            0x1000 => { 
+                // 1nnn: Jumps to location nnn
                 self.pc = nnn;
                 self.log("JP addr");
             },
-            0x2000 => { // 2nnn: Calls subroutine at nnn
+            0x2000 => { 
+                // 2nnn: Calls subroutine at nnn
                 self.stack[self.sp] = self.pc + 2;
                 self.sp += 1;
                 self.pc = nnn;
                 self.log("CALL addr");
             },
-            0x3000 => { // 3xkk: Skip next instruction if Vx = kk
+            0x3000 => { 
+                // 3xkk: Skip next instruction if Vx = kk
                 if self.v[x] == kk {
                     self.pc += 4;
                 } else {
@@ -143,7 +148,8 @@ impl Chip8 {
                 }
                 self.log("SE Vx, byte");
             },
-            0x4000 => { // 4xkk: Skip next instruction if Vx != kk
+            0x4000 => { 
+                // 4xkk: Skip next instruction if Vx != kk
                 if self.v[x] != kk {
                     self.pc += 4;
                 } else {
@@ -151,7 +157,8 @@ impl Chip8 {
                 }
                 self.log("SNE Vx, byte");
             },
-            0x5000 => { // 5xy0: Skip next instruction if Vx = Vy
+            0x5000 => { 
+                // 5xy0: Skip next instruction if Vx = Vy
                 if self.v[x] == self.v[y] {
                     self.pc += 4;
                 } else {
@@ -159,39 +166,46 @@ impl Chip8 {
                 }
                 self.log("SE Vx, Vy");
             },
-            0x6000 => { // 6xkk: Set Vx = kk
+            0x6000 => { 
+                // 6xkk: Set Vx = kk
                 self.v[x] = kk;
                 self.pc += 2;
                 self.log("LD Vx, byte");
             },
-            0x7000 => { // 7xkk: Set Vx = Vx + kk
+            0x7000 => { 
+                // 7xkk: Set Vx = Vx + kk
                 self.v[x] = (self.v[x] as u16 + kk as u16) as u8;
                 self.pc += 2;
                 self.log("ADD Vx, byte");
             },
             0x8000 => {
                 match self.opcode & 0x000F {
-                    0x0000 => { // 8xy0: Set Vx = Vy
+                    0x0000 => { 
+                        // 8xy0: Set Vx = Vy
                         self.v[x] = self.v[y];
                         self.pc += 2;
                         self.log("LD Vx, Vy");
                     },
-                    0x0001 => { // 8xy1: Set Vx = Vx OR Vy
+                    0x0001 => { 
+                        // 8xy1: Set Vx = Vx OR Vy
                         self.v[x] = self.v[x] | self.v[y];
                         self.pc += 2;
                         self.log("OR Vx, Vy");
                     },
-                    0x0002 => { // 8xy2: Set Vx = Vx AND Vy
+                    0x0002 => { 
+                        // 8xy2: Set Vx = Vx AND Vy
                         self.v[x] = self.v[x] & self.v[y];
                         self.pc += 2;
                         self.log("AND Vx, Vy");
                     },
-                    0x0003 => { // 8xy3: Set Vx = Vx XOR Vy
+                    0x0003 => { 
+                        // 8xy3: Set Vx = Vx XOR Vy
                         self.v[x] = self.v[x] ^ self.v[y];
                         self.pc += 2;
                         self.log("XOR Vx, Vy");
                     },
-                    0x0004 => { // 8xy4: Set Vx = Vx + Vy, set VF = carry
+                    0x0004 => { 
+                        // 8xy4: Set Vx = Vx + Vy, set VF = carry
                         if self.v[x] > 255 {
                             self.v[0xF] = 1;
                         } else {
@@ -201,23 +215,26 @@ impl Chip8 {
                         self.pc += 2;
                         self.log("ADD Vx, Vy");
                     },
-                    0x0005 => { // 8xy5: Set Vx = Vx - Vy, set VF = NOT borrow
+                    0x0005 => { 
+                        // 8xy5: Set Vx = Vx - Vy, set VF = NOT borrow
                         if self.v[x] > self.v[y] {
-                            self.v[0xF] = 1;
+                            self.v[0x0F] = 1;
                         } else {
-                            self.v[0xF] = 0;
+                            self.v[0x0F] = 0;
                         }
                         self.v[x] = self.v[x].wrapping_sub(self.v[y]); 
                         self.pc += 2;
                         self.log("SUB Vx, Vy");
                     },
-                    0x0006 => { // 8xy6: Set Vx = Vx SHR 1
+                    0x0006 => { 
+                        // 8xy6: Set Vx = Vx SHR 1
                         self.v[0xF] = self.v[x] & 1;
                         self.v[x] >>= 1;
                         self.pc += 2;
                         self.log("SHR Vx {, Vy}");
                     },
-                    0x0007 => { // 8xy7: Set Vx = Vy - Vx, set VF = NOT borrow
+                    0x0007 => { 
+                        // 8xy7: Set Vx = Vy - Vx, set VF = NOT borrow
                         if self.v[y] > self.v[x] {
                             self.v[0xF] = 1;
                         } else {
@@ -227,7 +244,8 @@ impl Chip8 {
                         self.pc += 2;
                         self.log("SUBN Vx, Vy");
                     },
-                    0x000E => { // 8xyE: set Vx = Vx SHL 1
+                    0x000E => { 
+                        // 8xyE: set Vx = Vx SHL 1
                         self.v[0xF] = (self.v[x] & 0x80) >> 7;
                         self.v[x] <<= 1;
                         self.pc += 2;
@@ -236,7 +254,8 @@ impl Chip8 {
                     _ => println!("Unknown opcode [0x8000]: {:#0X}", self.opcode),
                 }
             },
-            0x9000 => { // 9xy0: Skip next instruction if Vx != Vy
+            0x9000 => { 
+                // 9xy0: Skip next instruction if Vx != Vy
                 if self.v[x] != self.v[y] >> 4 {
                     self.pc += 4;
                 } else {
@@ -244,21 +263,25 @@ impl Chip8 {
                 }
                 self.log("SNE Vx, Vy");
             },
-            0xA000 => { // Annn: Set I = nnn
+            0xA000 => { 
+                // Annn: Set I = nnn
                 self.i = nnn;
                 self.pc += 2;
                 self.log("LD I, addr");
             },
-            0xB000 => { // Bnnn: Jump to location nnn + V0
+            0xB000 => { 
+                // Bnnn: Jump to location nnn + V0
                 self.pc = nnn + (self.v[0] as u16);
                 self.log("JP V0, addr");
             },
-            0xC000 => { // Cxkk: Set Vx = random byte AND kk
+            0xC000 => { 
+                // Cxkk: Set Vx = random byte AND kk
                 self.v[x] = rand::thread_rng().gen::<u8>() & kk;
                 self.pc += 2;
                 self.log("RND Vx, byte");
             },
-            0xD000 => { // Dxyn: Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
+            0xD000 => { 
+                // Dxyn: Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
                 self.v[0xF] = 0;
 
                 for byte in 0..n {
@@ -278,7 +301,8 @@ impl Chip8 {
             },
             0xE000 => {
                 match self.opcode & 0x000F {
-                    0x000E => { // Ex9E: Skip next instruction if key with the value of Vx is pressed
+                    0x000E => { 
+                        // Ex9E: Skip next instruction if key with the value of Vx is pressed
                         if self.key[self.v[x] as usize] == 1 {
                             self.pc += 4;
                         } else {
@@ -286,7 +310,8 @@ impl Chip8 {
                         }
                         self.log("SKP Vx");
                     },
-                    0x0001 => { // ExA1: Skip next instruction if key with the value of Vx is not pressed
+                    0x0001 => { 
+                        // ExA1: Skip next instruction if key with the value of Vx is not pressed
                         if self.key[self.v[x] as usize] != 1 {
                             self.pc += 4;
                         } else {
@@ -299,12 +324,14 @@ impl Chip8 {
             },
             0xF000 => {
                 match self.opcode & 0x00FF {
-                    0x0007 => { // Fx07: Set Vx = delay timer value
+                    0x0007 => { 
+                        // Fx07: Set Vx = delay timer value
                         self.v[x] = self.delay_timer;
                         self.pc += 2;
                         self.log("LD Vx, DT");
                     },
-                    0x000A => { // Fx0A: Wait for a key press, store the value of the key in Vx
+                    0x000A => { 
+                        // Fx0A: Wait for a key press, store the value of the key in Vx
                         if self.key != [0; 16] {
                             for i in 0..15 {
                                 if self.key[i] != 0 {
@@ -316,41 +343,48 @@ impl Chip8 {
                             self.log("LD Vx, K");
                         }
                     },
-                    0x0015 => { // Fx15: Set delay timer = Vx
+                    0x0015 => { 
+                        // Fx15: Set delay timer = Vx
                         self.delay_timer = self.v[x];
                         self.pc += 2;
                         self.log("LD DT, Vx");
                     },
-                    0x0018 => { // Set sound timer = Vx
+                    0x0018 => { 
+                        // Set sound timer = Vx
                         self.sound_timer = self.v[x];
                         self.pc += 2;
                         self.log("LD ST, Vx");
                     },
-                    0x001E => { // Set I = I + Vx
+                    0x001E => { 
+                        // Set I = I + Vx
                         self.i += self.v[x] as u16;
                         self.pc += 2;
                         self.log("ADD I, Vx");
                     },
-                    0x0029 => { // Set I = location of sprite for digit Vx
+                    0x0029 => { 
+                        // Set I = location of sprite for digit Vx
                         self.i = (self.v[x] as u16) * 5;
                         self.pc += 2;
                         self.log("LD F, Vx");
                     },
-                    0x0033 => { // Store BCD representation of Vx in memory location I, I+1, and I+2
+                    0x0033 => { 
+                        // Store BCD representation of Vx in memory location I, I+1, and I+2
                         self.memory[self.i as usize]       =   self.v[x] / 100;
                         self.memory[(self.i + 1) as usize] =  (self.v[x] / 10) % 10;
                         self.memory[(self.i + 2) as usize] =  (self.v[x] % 100) % 10;
                         self.pc += 2;
                         self.log("LD B, Vx");
                     },
-                    0x0055 => { // Store registers V0 through Vx in memory starting at location I
+                    0x0055 => { 
+                        // Store registers V0 through Vx in memory starting at location I
                         for i in 0..(x as u16) {
                             self.memory[(self.i + i) as usize] = self.v[i as usize];
                         }
                         self.pc += 2;
                         self.log("LD [I], Vx");
                     },
-                    0x0065 => { // Read registers V0 through Vx from memory starting at location I
+                    0x0065 => { 
+                        // Read registers V0 through Vx from memory starting at location I
                         for i in 0..(x as u16) {
                             self.v[i as usize] = self.memory[(self.i + i) as usize];
                         }
