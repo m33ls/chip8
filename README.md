@@ -9,7 +9,7 @@ This is a chip8 emulator written in rust, using the winit and pixels libraries f
 ```
 git clone https://github.com/m33ls/chip8.git
 cd chip8
-cargo run /path/to/rom
+cargo run -- /path/to/rom
 ```
 
 ## References

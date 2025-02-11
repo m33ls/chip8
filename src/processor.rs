@@ -102,9 +102,14 @@ impl Chip8 {
         println!("{:#0x}      {:04x}      {}", self.pc, self.opcode, call);
     }
 
-    pub fn emulate_cycle(&mut self) {
+    fn get_opcode(&mut self) -> u16 {
         // fetch opcode
-        self.opcode = (self.memory[self.pc as usize] as u16) << 8 | (self.memory[self.pc as usize + 1] as u16);
+        (self.memory[self.pc as usize] as u16) << 8 | (self.memory[self.pc as usize + 1] as u16)
+    }
+
+    pub fn emulate_cycle(&mut self) {
+
+        self.opcode = self.get_opcode();
         
         let x        = ((self.opcode & 0x0F00) >> 8) as usize;
         let y        = ((self.opcode & 0x00F0) >> 4) as usize;
