@@ -6,7 +6,7 @@ use crate::{WIDTH};
 // configure test cases
 #[cfg(test)]
 #[path = "test_opcodes.rs"]
-mod processor_test;
+mod test_opcodes;
 
 // implement data types
 

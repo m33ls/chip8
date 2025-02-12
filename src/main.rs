@@ -40,20 +40,20 @@ fn main() -> Result<(), Error> {
     };
 
     // Initialize the Chip8 system and load the game into memory
-    let mut myChip8 = Chip8::initialize();
-    myChip8.load_fontset();
+    let mut my_chip8 = Chip8::initialize();
+    my_chip8.load_fontset();
 
     let path = std::env::args().nth(1).expect("No path entered");
-    let _ = myChip8.load_program(&path);
+    let _ = my_chip8.load_program(&path);
 
     let mut last_frame = std::time::Instant::now();
-    let mut last_timer = std::time::Instant::now();
+    let last_timer = std::time::Instant::now();
 
     // emulation loop
     let res = event_loop.run(|event, elwt| {
 
         // emulate one cycle
-        myChip8.emulate_cycle();
+        my_chip8.emulate_cycle();
 
         // lazy timing implementation
         if last_frame.elapsed() < Duration::from_secs(1 / TICK_SPEED) {
@@ -63,16 +63,16 @@ fn main() -> Result<(), Error> {
         last_frame = std::time::Instant::now();
 
         // update timers
-        if myChip8.delay_timer > 0 {
+        if my_chip8.delay_timer > 0 {
             if last_timer.elapsed() >= Duration::from_secs(1 / 60) {
-                myChip8.delay_timer = myChip8.delay_timer - 1;
+                my_chip8.delay_timer = my_chip8.delay_timer - 1;
             }
         }
         
-        if myChip8.sound_timer > 0 {
+        if my_chip8.sound_timer > 0 {
             if last_timer.elapsed() >= Duration::from_secs(1 / 60) {
                 println!("BEEP");
-                myChip8.sound_timer = myChip8.sound_timer - 1;
+                my_chip8.sound_timer = my_chip8.sound_timer - 1;
             }
         }
 
@@ -82,9 +82,9 @@ fn main() -> Result<(), Error> {
             ..
         } = event
         {
-            if myChip8.draw_flag {
-                myChip8.draw(pixels.frame_mut());
-                myChip8.draw_flag = false;
+            if my_chip8.draw_flag {
+                my_chip8.draw(pixels.frame_mut());
+                my_chip8.draw_flag = false;
                 if let Err(err) = pixels.render() {
                     log_error("pixels.render", err);
                     elwt.exit();
@@ -107,13 +107,13 @@ fn main() -> Result<(), Error> {
             ];
 
             for i in 0..keybinds.len() {
-                if input.key_pressed(keybinds[i]) {myChip8.key[i] = 1;}
-                else if input.key_released(keybinds[i]) {myChip8.key[i] = 0;}
+                if input.key_pressed(keybinds[i]) {my_chip8.key[i] = 1;}
+                else if input.key_released(keybinds[i]) {my_chip8.key[i] = 0;}
             }
             
             // resize the window
             if let Some(size) = input.window_resized() {
-                myChip8.draw_flag = true;
+                my_chip8.draw_flag = true;
                 if let Err(err) = pixels.resize_surface(size.width, size.height) {
                     log_error("pixels.resize_surface", err);
                     elwt.exit();

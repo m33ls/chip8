@@ -1,22 +1,17 @@
-
 use crate::Chip8;
 
 #[test]
 fn test_initialize() {
-    let mut myChip8 = Chip8::initialize();
-    assert_eq!(myChip8.pc, 0x200);
-    assert_eq!(myChip8.sp, 0);
-    assert_eq!(myChip8.stack, [0; 16]);
-
-    myChip8.load_fontset();
-    assert_eq!(myChip8.memory[0], 0xF0);
-    assert_eq!(myChip8.memory[1], 0x90);
+    let my_chip8 = Chip8::initialize();
+    assert_eq!(my_chip8.pc, 0x200);
+    assert_eq!(my_chip8.sp, 0);
+    assert_eq!(my_chip8.stack, [0; 16]);
 }
 
 #[test]
 fn test_fontset() {
-    let mut myChip8 = Chip8::initialize();
-    myChip8.load_fontset();
+    let mut my_chip8 = Chip8::initialize();
+    my_chip8.load_fontset();
 
     let fontset_test: [u8; 80] = [
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -38,7 +33,7 @@ fn test_fontset() {
     ];
 
     for i in 0..80 {
-        assert_eq!(myChip8.memory[i], fontset_test[i]);
+        assert_eq!(my_chip8.memory[i], fontset_test[i]);
     }
 }
 
