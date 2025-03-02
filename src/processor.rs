@@ -255,14 +255,14 @@ impl Chip8 {
     pub fn op_8xy2(&mut self, x: usize, y: usize) {
         // AND Vx, Vy
         // Set Vx = Vx AND Vy
-        self.v[x] = self.v[x] & self.v[y];
+        self.v[x] &= self.v[y];
         self.pc += 2;
         self.log("AND Vx, Vy");
     }
     pub fn op_8xy3(&mut self, x: usize, y: usize) {
         // XOR Vx, Vy
         // Set Vx = Vx XOR Vy
-        self.v[x] = self.v[x] ^ self.v[y];
+        self.v[x] ^= self.v[y];
         self.pc += 2;
         self.log("XOR Vx, Vy");
     }
@@ -288,9 +288,9 @@ impl Chip8 {
         // SUB Vx, Vy
         // Set Vx = Vx - Vy, set VF = NOT borrow
         if self.v[x] > self.v[y] {
-            self.v[0x0F] = 1;
+            self.v[0xF] = 1;
         } else {
-            self.v[0x0F] = 0;
+            self.v[0xF] = 0;
         }
         self.v[x] = self.v[x].wrapping_sub(self.v[y]); 
         self.pc += 2;
@@ -312,7 +312,7 @@ impl Chip8 {
         } else {
             self.v[0xF] = 0;
         }
-        self.v[x] = self.v[y] - self.v[x];
+        self.v[x] = self.v[y].wrapping_sub(self.v[x]);
         self.pc += 2;
         self.log("SUBN Vx, Vy");
     }
@@ -327,7 +327,7 @@ impl Chip8 {
     pub fn op_9xy0(&mut self, x: usize, y: usize) {
         // SNE Vx, Vy
         // Skip next instruction if Vx != Vy
-        if self.v[x] != self.v[y] >> 4 {
+        if self.v[x] != self.v[y] {
             self.pc += 4;
         } else {
             self.pc += 2;
@@ -350,7 +350,8 @@ impl Chip8 {
     pub fn op_cxkk(&mut self, x: usize, kk: u8) {
         // RND Vx, byte
         // Set Vx = random byte AND kk
-        self.v[x] = rand::thread_rng().gen::<u8>() & kk;
+        let mut rng = rand::thread_rng();
+        self.v[x] = rng.gen::<u8>() & kk;
         self.pc += 2;
         self.log("RND Vx, byte");
     }
@@ -452,15 +453,15 @@ impl Chip8 {
         // LD B, Vx
         // Store BCD representation of Vx in memory locations I, I+1, and I+2
         self.memory[self.i as usize]       =   self.v[x] / 100;
-        self.memory[(self.i + 1) as usize] =  (self.v[x] / 10) % 10;
-        self.memory[(self.i + 2) as usize] =  (self.v[x] % 100) % 10;
+        self.memory[(self.i + 1) as usize] =  (self.v[x] % 100) / 10;
+        self.memory[(self.i + 2) as usize] =   self.v[x] % 10;
         self.pc += 2;
         self.log("LD B, Vx");
     }
     pub fn op_fx55(&mut self, x: usize) {
         // LD [I], Vx
         // Store registers V0 through Vx in memory starting at location I
-        for i in 0..(x as u16) {
+        for i in 0..(x as u16) + 1 {
             self.memory[(self.i + i) as usize] = self.v[i as usize];
         }
         self.pc += 2;
@@ -469,7 +470,7 @@ impl Chip8 {
     pub fn op_fx65(&mut self, x: usize) {
         // LD Vx, [I]
         // Read registers V0 through Vx from memory starting at location I
-        for i in 0..(x as u16) {
+        for i in 0..(x as u16) + 1 {
             self.v[i as usize] = self.memory[(self.i + i) as usize];
         }
         self.pc += 2;
