@@ -61,7 +61,7 @@ fn main() -> Result<(), Error> {
         }
         println!("DT: {:?}", last_frame.elapsed()); 
         last_frame = std::time::Instant::now();
-
+        
         // update timers
         if my_chip8.delay_timer > 0 {
             if last_timer.elapsed() >= Duration::from_secs(1 / 60) {
@@ -99,11 +99,28 @@ fn main() -> Result<(), Error> {
                 return;
             }
 
+            // Keybinds
+            // +-+-+-+-+    +-+-+-+-+
+            // |1|2|3|C|    |1|2|3|4|
+            // +-+-+-+-+    +-+-+-+-+
+            // |4|5|6|D|    |Q|W|E|R|
+            // +-+-+-+-+ => +-+-+-+-+
+            // |7|8|9|E|    |A|S|D|F|
+            // +-+-+-+-+    +-+-+-+-+
+            // |A|0|B|F|    |Z|X|C|V|
+            // +-+-+-+-+    +-+-+-+-+
+            //
+            // Array
+            // x 1 2 3 
+            // q w e a
+            // s d z c 
+            // 4 r f v
+
             let keybinds = [
-                KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3, KeyCode::Digit4,
-                KeyCode::KeyQ,   KeyCode::KeyW,   KeyCode::KeyE,   KeyCode::KeyR,
-                KeyCode::KeyA,   KeyCode::KeyS,   KeyCode::KeyD,   KeyCode::KeyF,
-                KeyCode::KeyZ,   KeyCode::KeyX,   KeyCode::KeyC,   KeyCode::KeyV
+                KeyCode::KeyX, KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3,
+                KeyCode::KeyQ,   KeyCode::KeyW,   KeyCode::KeyE,   KeyCode::KeyA,
+                KeyCode::KeyS,   KeyCode::KeyD,   KeyCode::KeyZ,   KeyCode::KeyC,
+                KeyCode::Digit4,   KeyCode::KeyR,   KeyCode::KeyF,   KeyCode::KeyV
             ];
 
             for i in 0..keybinds.len() {
