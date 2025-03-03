@@ -12,7 +12,7 @@ use crate::processor::Chip8;
 
 const WIDTH: u32 = 64;
 const HEIGHT: u32 = 32;
-const TICK_SPEED: u64 = 150;
+const TICK_SPEED: u64 = 500;
 
 mod processor;
 
@@ -49,6 +49,8 @@ fn main() -> Result<(), Error> {
     let mut last_frame = std::time::Instant::now();
     let last_timer = std::time::Instant::now();
 
+    let mut frames_since_tick = 0;
+
     // emulation loop
     let res = event_loop.run(|event, elwt| {
 
@@ -62,18 +64,19 @@ fn main() -> Result<(), Error> {
         println!("DT: {:?}", last_frame.elapsed()); 
         last_frame = std::time::Instant::now();
         
-        // update timers
-        if my_chip8.delay_timer > 0 {
-            if last_timer.elapsed() >= Duration::from_secs(1 / 60) {
-                my_chip8.delay_timer = my_chip8.delay_timer - 1;
+        if frames_since_tick >= TICK_SPEED / 60 {
+            // update timers
+            if my_chip8.delay_timer > 0 {
+                    my_chip8.delay_timer = my_chip8.delay_timer - 1;
             }
-        }
         
-        if my_chip8.sound_timer > 0 {
-            if last_timer.elapsed() >= Duration::from_secs(1 / 60) {
-                println!("BEEP");
-                my_chip8.sound_timer = my_chip8.sound_timer - 1;
+            if my_chip8.sound_timer > 0 {
+                    println!("BEEP");
+                    my_chip8.sound_timer = my_chip8.sound_timer - 1;
             }
+            frames_since_tick = 0;
+        } else {
+            frames_since_tick += 1;
         }
 
         // if the draw flag is set, draw the current frame
@@ -100,27 +103,29 @@ fn main() -> Result<(), Error> {
             }
 
             // Keybinds
-            // +-+-+-+-+    +-+-+-+-+
-            // |1|2|3|C|    |1|2|3|4|
-            // +-+-+-+-+    +-+-+-+-+
-            // |4|5|6|D|    |Q|W|E|R|
+            //
+            // +-+-+-+-+    +-+-+-+-+  For example, key at index array[c] is 4.
+            // |1|2|3|C|    |1|2|3|4|                            array[d] is r.
+            // +-+-+-+-+    +-+-+-+-+                                      
+            // |4|5|6|D|    |Q|W|E|R|                                . . .
             // +-+-+-+-+ => +-+-+-+-+
             // |7|8|9|E|    |A|S|D|F|
             // +-+-+-+-+    +-+-+-+-+
             // |A|0|B|F|    |Z|X|C|V|
             // +-+-+-+-+    +-+-+-+-+
+            //    old          new
             //
-            // Array
-            // x 1 2 3 
-            // q w e a
-            // s d z c 
-            // 4 r f v
+            // Resulting Array
+            // x, 1, 2, 3,
+            // q, w, e, a,
+            // s, d, z, c, 
+            // 4, r, f, v
 
             let keybinds = [
-                KeyCode::KeyX, KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3,
+                KeyCode::KeyX,   KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3,
                 KeyCode::KeyQ,   KeyCode::KeyW,   KeyCode::KeyE,   KeyCode::KeyA,
                 KeyCode::KeyS,   KeyCode::KeyD,   KeyCode::KeyZ,   KeyCode::KeyC,
-                KeyCode::Digit4,   KeyCode::KeyR,   KeyCode::KeyF,   KeyCode::KeyV
+                KeyCode::Digit4, KeyCode::KeyR,   KeyCode::KeyF,   KeyCode::KeyV
             ];
 
             for i in 0..keybinds.len() {
